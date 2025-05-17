@@ -58,7 +58,7 @@ export const register = async (req, res) => {
                 email: user.email,
                 otp
             },
-            emailTemplate: "email_otp.ejs"
+            emailTemplate: "verification_otp.ejs"
         });
 
         res.status(201).json({
@@ -69,7 +69,7 @@ export const register = async (req, res) => {
         });
     } catch (error) {
         console.error("register(): catch error : ", error);
-        res.status(500).status({
+        res.status(500).json({
             success: false,
             message: "Internal server error",
             error: error.stack
@@ -130,7 +130,7 @@ export const login = async (req, res) => {
                     email: user.email,
                     otp
                 },
-                emailTemplate: "email_otp.ejs"
+                emailTemplate: "verification_otp.ejs"
             });
         }
 
@@ -142,7 +142,7 @@ export const login = async (req, res) => {
         });
     } catch (error) {
         console.error("register(): catch error : ", error);
-        res.status(500).status({
+        res.status(500).json({
             success: false,
             message: "Internal server error",
             error: error.stack
@@ -159,7 +159,7 @@ export const profile = async (req, res) => {
         });
     } catch (error) {
         console.error("profile(): catch error : ", error);
-        res.status(500).status({
+        res.status(500).json({
             success: false,
             message: "Internal server error",
             error: error.stack
@@ -169,10 +169,10 @@ export const profile = async (req, res) => {
 
 export const resendOtp = async (req, res) => {
     try {
-        const loggedUser = checkedLoggedUser(req.user);
+        const loggedUser = await checkedLoggedUser(req.user);
 
-        if (!loggedUser.isEmailVerified) {
-            return res.status(400).status({
+        if (loggedUser.isEmailVerified) {
+            return res.status(400).json({
                 success: false,
                 message: "Email already verified"
             });
@@ -183,13 +183,13 @@ export const resendOtp = async (req, res) => {
 
         sendMail({
             to: loggedUser.email,
-            subject: "Email verification OTP",
+            subject: "Resend OTP",
             variables: {
                 firstName: loggedUser.firstName,
                 lastName: loggedUser.lastName,
                 otp: loggedUser.emailOtp
             },
-            emailTemplate: "email_otp.ejs"
+            emailTemplate: "verification_otp.ejs"
         });
 
         res.status(200).json({
@@ -199,7 +199,7 @@ export const resendOtp = async (req, res) => {
         });
     } catch (error) {
         console.error("profile(): catch error : ", error);
-        res.status(500).status({
+        res.status(500).json({
             success: false,
             message: "Internal server error",
             error: error.stack
@@ -257,7 +257,7 @@ export const verifyOtp = async (req, res) => {
         });
     } catch (error) {
         console.error("verifyOtp(): catch error : ", error);
-        res.status(500).status({
+        res.status(500).json({
             success: false,
             message: "Internal server error",
             error: error.stack
@@ -311,7 +311,7 @@ export const forgotPassword = async (req, res) => {
         });
     } catch (error) {
         console.error("profile(): catch error : ", error);
-        res.status(500).status({
+        res.status(500).json({
             success: false,
             message: "Internal server error",
             error: error.stack
@@ -359,7 +359,7 @@ export const resetPassword = async (req, res) => {
         });
     } catch (error) {
         console.error("profile(): catch error : ", error);
-        res.status(500).status({
+        res.status(500).json({
             success: false,
             message: "Internal server error",
             error: error.stack
@@ -411,7 +411,7 @@ export const changePassword = async (req, res) => {
         });
     } catch (error) {
         console.error("changePassword(): catch error : ", error);
-        res.status(500).status({
+        res.status(500).json({
             success: false,
             message: "Internal server error",
             error: error.stack
@@ -471,7 +471,7 @@ export const changeEmail = async (req, res) => {
                 email: user.email,
                 otp: user.emailOtp
             },
-            emailTemplate: "email_otp.ejs"
+            emailTemplate: "verification_otp.ejs"
         });
 
         res.status(200).json({
@@ -480,7 +480,7 @@ export const changeEmail = async (req, res) => {
         });
     } catch (error) {
         console.error("changeEmail(): catch error : ", error);
-        res.status(500).status({
+        res.status(500).json({
             success: false,
             message: "Internal server error",
             error: error.stack
