@@ -25,3 +25,12 @@ export const resetPasswordSchema = Joi.object({
     otp: Joi.string().required().label("OTP"),
     newPassword: Joi.string().required().label("New Password")
 });
+
+export const changeEmailSchema = Joi.object({
+    newEmail: Joi.string().required().label("New Email"),
+});
+
+export const changePasswordSchema = Joi.object({
+    currentPassword: Joi.string().required().label("Current Password"),
+    newPassword: Joi.string().required().label("New Password")
+});

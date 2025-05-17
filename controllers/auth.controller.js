@@ -1,9 +1,9 @@
 import { createUser, findUser } from "../services/auth.service.js";
-import { hashedPassword } from "../services/bcrypt.service.js";
+import { comparePassword, hashedPassword } from "../services/bcrypt.service.js";
 import { sendMail } from "../services/email.service.js";
 import { generateAccessToken } from "../services/jwt.service.js";
 import { generateOtp } from "../utils/helper.js";
-import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema, verifyOtpSchema } from "../utils/validators.js";
+import { changeEmailSchema, changePasswordSchema, forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema, verifyOtpSchema } from "../utils/validators.js";
 
 export const register = async (req, res) => {
     try {
@@ -310,6 +310,126 @@ export const resetPassword = async (req, res) => {
         });
     } catch (error) {
         console.error("profile(): catch error : ", error);
+        res.status(500).status({
+            success: false,
+            message: "Internal server error",
+            error: error.stack
+        });
+    }
+};
+
+export const changePassword = async (req, res) => {
+    try {
+        const { id, email, role } = req.user;
+        const { error, value } = changePasswordSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({
+                success: false,
+                message: "Validation error",
+                error: error
+            });
+        }
+
+        const options = {
+            where: {
+                id,
+                email,
+                role
+            },
+        };
+        const user = await findUser(options);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        if (comparePassword(value.currentPassword, user.password)) {
+            return res.status(404).json({
+                success: false,
+                message: "Current Password is not matched"
+            });
+        }
+
+        user.password = hashedPassword(value.newPassword);
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Change password successfully"
+        });
+    } catch (error) {
+        console.error("changePassword(): catch error : ", error);
+        res.status(500).status({
+            success: false,
+            message: "Internal server error",
+            error: error.stack
+        });
+    }
+};
+
+export const changeEmail = async (req, res) => {
+    try {
+        const { id, email, role } = req.user;
+        const { error, value } = changeEmailSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({
+                success: false,
+                message: "Validation error",
+                error: error
+            });
+        }
+
+        const options = {
+            where: {
+                id,
+                email,
+                role
+            },
+        };
+        const user = await findUser(options);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+        
+        const findOptions = {
+            where: {
+                email: value.newEmail
+            },
+        };
+        const isEmailExist = await findUser(findOptions);
+        if (isEmailExist) {
+            return res.status(404).json({
+                success: false,
+                message: "Email is already exist"
+            });
+        }
+
+        user.emailOtp = generateOtp();
+        await user.save();
+
+        sendMail({
+            to: user.email,
+            subject: "Email verification OTP",
+            variables: {
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                otp: user.emailOtp
+            },
+            emailTemplate: "email_otp.ejs"
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Email OTP send to your new email, please verify."
+        });
+    } catch (error) {
+        console.error("changeEmail(): catch error : ", error);
         res.status(500).status({
             success: false,
             message: "Internal server error",
