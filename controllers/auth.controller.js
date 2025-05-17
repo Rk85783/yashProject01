@@ -64,7 +64,8 @@ export const register = async (req, res) => {
         res.status(201).json({
             success: true,
             message: "Registeration successful",
-            token
+            token,
+            isEmailVerified: user.isEmailVerified
         });
     } catch (error) {
         console.error("register(): catch error : ", error);
@@ -100,6 +101,13 @@ export const login = async (req, res) => {
             });
         }
 
+        if (!comparePassword(value.password, user.password)) {
+            return res.status(404).json({
+                success: false,
+                message: "Invalid Credencials"
+            });
+        }
+
         const payload = {
             id: user.id,
             email: user.email,
@@ -129,7 +137,8 @@ export const login = async (req, res) => {
         res.status(201).json({
             success: true,
             message: "Registeration successful",
-            token
+            token,
+            isEmailVerified: user.isEmailVerified
         });
     } catch (error) {
         console.error("register(): catch error : ", error);
@@ -345,7 +354,8 @@ export const changePassword = async (req, res) => {
             });
         }
 
-        if (comparePassword(value.currentPassword, user.password)) {
+        console.log(comparePassword(value.currentPassword, user.password));
+        if (!comparePassword(value.currentPassword, user.password)) {
             return res.status(404).json({
                 success: false,
                 message: "Current Password is not matched"
