@@ -1,4 +1,4 @@
-import { createUser, findUser } from "../services/auth.service.js";
+import { checkedLoggedUser, createUser, findUser } from "../services/auth.service.js";
 import { comparePassword, hashedPassword } from "../services/bcrypt.service.js";
 import { sendMail } from "../services/email.service.js";
 import { generateAccessToken } from "../services/jwt.service.js";
@@ -156,6 +156,46 @@ export const profile = async (req, res) => {
             success: true,
             message: "Profile details fetched successfully",
             profile: req.user
+        });
+    } catch (error) {
+        console.error("profile(): catch error : ", error);
+        res.status(500).status({
+            success: false,
+            message: "Internal server error",
+            error: error.stack
+        });
+    }
+};
+
+export const resendOtp = async (req, res) => {
+    try {
+        const loggedUser = checkedLoggedUser(req.user);
+
+        if (!loggedUser.isEmailVerified) {
+            return res.status(400).status({
+                success: false,
+                message: "Email already verified"
+            });
+        }
+
+        loggedUser.emailOtp = generateOtp();
+        await loggedUser.save();
+
+        sendMail({
+            to: loggedUser.email,
+            subject: "Email verification OTP",
+            variables: {
+                firstName: loggedUser.firstName,
+                lastName: loggedUser.lastName,
+                otp: loggedUser.emailOtp
+            },
+            emailTemplate: "email_otp.ejs"
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Profile details fetched successfully",
+            isEmailVerified: loggedUser.isEmailVerified
         });
     } catch (error) {
         console.error("profile(): catch error : ", error);
