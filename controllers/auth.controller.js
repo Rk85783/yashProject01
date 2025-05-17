@@ -3,7 +3,7 @@ import { hashedPassword } from "../services/bcrypt.service.js";
 import { sendMail } from "../services/email.service.js";
 import { generateAccessToken } from "../services/jwt.service.js";
 import { generateOtp } from "../utils/helper.js";
-import { loginSchema, registerSchema, verifyOtpSchema } from "../utils/validators.js";
+import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema, verifyOtpSchema } from "../utils/validators.js";
 
 export const register = async (req, res) => {
     try {
@@ -142,8 +142,20 @@ export const login = async (req, res) => {
 };
 
 export const profile = async (req, res) => {
-    console.log(req.user);
-    res.json(req.user);
+    try {
+        res.status(200).json({
+            success: true,
+            message: "Profile details fetched successfully",
+            profile: req.user
+        });
+    } catch (error) {
+        console.error("profile(): catch error : ", error);
+        res.status(500).status({
+            success: false,
+            message: "Internal server error",
+            error: error.stack
+        });
+    }
 };
 
 export const verifyOtp = async (req, res) => {
@@ -196,6 +208,108 @@ export const verifyOtp = async (req, res) => {
         });
     } catch (error) {
         console.error("verifyOtp(): catch error : ", error);
+        res.status(500).status({
+            success: false,
+            message: "Internal server error",
+            error: error.stack
+        });
+    }
+};
+
+export const forgotPassword = async (req, res) => {
+    try {
+        const { error, value } = forgotPasswordSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({
+                success: false,
+                message: "Validation error",
+                error: error
+            });
+        }
+
+        const options = {
+            where: {
+                email: value.email
+            },
+        };
+        const user = await findUser(options);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        const otp = generateOtp();
+
+        user.emailOtp = otp;
+        await user.save();
+
+        sendMail({
+            to: user.email,
+            subject: "Forgot Password OTP",
+            variables: {
+                firstName: user.firstName,
+                lastName: user.lastName,
+                otp
+            },
+            emailTemplate: "forgot_password.ejs"
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Forgot password OTP send successfully"
+        });
+    } catch (error) {
+        console.error("profile(): catch error : ", error);
+        res.status(500).status({
+            success: false,
+            message: "Internal server error",
+            error: error.stack
+        });
+    }
+};
+
+export const resetPassword = async (req, res) => {
+    try {
+        const { error, value } = resetPasswordSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({
+                success: false,
+                message: "Validation error",
+                error: error
+            });
+        }
+
+        const options = {
+            where: {
+                email: value.email
+            },
+        };
+        const user = await findUser(options);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        if (value.otp != user.emailOtp) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid OTP"
+            });
+        }
+
+        user.emailOtp = null;
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Reset password successfully"
+        });
+    } catch (error) {
+        console.error("profile(): catch error : ", error);
         res.status(500).status({
             success: false,
             message: "Internal server error",

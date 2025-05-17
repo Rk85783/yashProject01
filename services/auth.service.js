@@ -12,4 +12,8 @@ export const createUser = async (values) => {
     return await User.create(values);
 };
 
+export const updateUser = async (values, options) => {
+    return await User.update(values, options);
+};
+
 
